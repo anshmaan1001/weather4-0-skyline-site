@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SKYLINE — Living 2D Weather</title>
+<style>
+:root{--accent:#ffb36b;--glass:rgba(10,20,37,.48);--line:rgba(255,255,255,.2)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#fff}
+body{min-height:100vh;overflow-x:hidden;background:#17304d}
+#world{position:fixed;inset:0;overflow:hidden;z-index:0;background:#6eb8e7}
+#landscape{position:absolute;inset:0;background-size:cover;background-position:center;transform:scale(1.035);transition:background-image 1s ease,filter 1.2s ease;animation:slowDrift 32s ease-in-out infinite alternate}
+#world:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,15,30,.52),rgba(5,15,30,.08) 58%,rgba(5,15,30,.22)),linear-gradient(0deg,rgba(3,13,25,.55),transparent 45%,rgba(5,13,28,.12));pointer-events:none}
+@keyframes slowDrift{from{transform:scale(1.035) translateX(-.25%)}to{transform:scale(1.09) translateX(.25%)}}
+/* Time-of-day photographic scenes */
+body.day #landscape{background-image:url('https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=2400&q=90')}
+body.sunrise #landscape{background-image:url('https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=2400&q=90')}
+body.sunset #landscape{background-image:url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2400&q=90')}
+body.night #landscape{background-image:url('https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=2400&q=90')}
+body.rain #landscape{background-image:url('https://images.unsplash.com/photo-1519692933481-e162a57d6721?auto=format&fit=crop&w=2400&q=90');filter:brightness(.68) saturate(.8)}
+body.snow #landscape{background-image:url('https://images.unsplash.com/photo-1418985991508-e47386d96a71?auto=format&fit=crop&w=2400&q=90');filter:brightness(.9) saturate(.72)}
+/* CSS-generated moving atmosphere */
+.sky-glow{position:absolute;width:42vw;height:42vw;min-width:300px;min-height:300px;border-radius:50%;top:-17vw;right:8%;background:radial-gradient(circle,rgba(255,225,154,.4),rgba(255,190,120,.1) 42%,transparent 70%);filter:blur(8px);animation:glow 8s ease-in-out infinite alternate;pointer-events:none}
+@keyframes glow{to{transform:translate(-35px,25px) scale(1.12);opacity:.65}}
+.sun{position:absolute;top:13%;right:19%;width:clamp(65px,9vw,135px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff9d7,#ffd879 48%,#ff9c52 100%);box-shadow:0 0 45px 14px rgba(255,194,105,.32),0 0 130px 35px rgba(255,176,94,.2);animation:sunTravel 28s ease-in-out infinite alternate;transition:opacity .8s}
+@keyframes sunTravel{to{transform:translate(-90px,22px)}}
+body.night .sun,body.rain .sun,body.snow .sun{opacity:0}
+.moon{position:absolute;top:13%;right:20%;width:clamp(58px,7vw,105px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#dce7ff 65%,#aab9d8);box-shadow:0 0 45px 12px rgba(202,221,255,.22);opacity:0;transition:opacity .8s}
+body.night .moon{opacity:1}
+.stars{position:absolute;inset:0;opacity:0;transition:opacity 1s;background-image:radial-gradient(2px 2px at 10% 20%,#fff 50%,transparent 60%),radial-gradient(1.5px 1.5px at 24% 14%,#fff 50%,transparent 60%),radial-gradient(2px 2px at 43% 25%,#fff 50%,transparent 60%),radial-gradient(1px 1px at 66% 12%,#fff 50%,transparent 60%),radial-gradient(2px 2px at 82% 28%,#fff 50%,transparent 60%),radial-gradient(1px 1px at 92% 16%,#fff 50%,transparent 60%),radial-gradient(1.5px 1.5px at 55% 8%,#fff 50%,transparent 60%);animation:twinkle 4s ease-in-out infinite alternate}
+body.night .stars{opacity:.85}
+@keyframes twinkle{to{opacity:.48}}
+.cloud{position:absolute;width:210px;height:65px;border-radius:60px;background:rgba(255,255,255,.74);filter:drop-shadow(0 12px 16px rgba(24,53,77,.12));opacity:.72;animation:cloudMove 48s linear infinite}
+.cloud:before,.cloud:after{content:"";position:absolute;background:inherit;border-radius:50%}
+.cloud:before{width:88px;height:88px;left:35px;top:-40px}.cloud:after{width:115px;height:115px;left:92px;top:-58px}
+.cloud.c1{top:20%;left:-240px;transform:scale(.75);animation-duration:62s}.cloud.c2{top:34%;left:-260px;transform:scale(.48);animation-duration:82s;animation-delay:-28s}.cloud.c3{top:12%;left:-280px;transform:scale(.36);animation-duration:95s;animation-delay:-45s}
+@keyframes cloudMove{to{translate:calc(100vw + 600px) 0}}
+body.night .cloud{opacity:.16}body.rain .cloud,body.snow .cloud{opacity:.6;filter:brightness(.7) drop-shadow(0 12px 16px rgba(0,0,0,.15))}
+.birds{position:absolute;top:27%;left:-12%;font-size:22px;letter-spacing:25px;color:rgba(24,38,49,.68);white-space:nowrap;animation:birdsFly 34s linear infinite;transform:rotate(-5deg)}
+@keyframes birdsFly{to{left:110%}}
+.rain-layer,.snow-layer{position:absolute;inset:-20%;pointer-events:none;opacity:0;transition:opacity .6s}
+.rain-layer{background-image:repeating-linear-gradient(104deg,transparent 0 18px,rgba(220,238,255,.42) 19px,transparent 21px 38px);background-size:100px 130px;animation:rainFall .42s linear infinite}
+body.rain .rain-layer{opacity:.65}
+@keyframes rainFall{to{background-position:0 130px}}
+.snow-layer{background-image:radial-gradient(4px 4px at 12% 15%,#fff 50%,transparent 60%),radial-gradient(3px 3px at 36% 42%,#fff 50%,transparent 60%),radial-gradient(5px 5px at 71% 23%,#fff 50%,transparent 60%),radial-gradient(3px 3px at 87% 69%,#fff 50%,transparent 60%);background-size:190px 180px;animation:snowFall 12s linear infinite}
+body.snow .snow-layer{opacity:.8}
+@keyframes snowFall{to{background-position:90px 360px}}
+/* Interface */
+.ui{position:relative;z-index:2;min-height:100vh;padding:28px clamp(18px,4vw,64px);display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.brand{display:flex;align-items:center;gap:13px}.brand-mark{width:44px;height:44px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(135deg,#ffcf8b,#ff8b58);color:#17253b;font-size:22px;font-weight:900;box-shadow:0 8px 30px #ff9d5c55}.brand-name{font-size:25px;font-weight:900;letter-spacing:3px}.brand-tag{font-size:10px;letter-spacing:2px;color:#e3eaf4;margin-top:3px}
+.live-pill{display:flex;align-items:center;gap:9px;padding:10px 15px;border:1px solid var(--line);border-radius:999px;background:rgba(8,19,34,.28);backdrop-filter:blur(12px);font-size:11px;letter-spacing:1.2px;color:#f4f7fb}.live-dot{width:7px;height:7px;border-radius:50%;background:#69e7a3;box-shadow:0 0 12px #69e7a3;animation:pulse 1.7s infinite}@keyframes pulse{50%{opacity:.35}}
+.main{width:min(1120px,100%);margin:auto 0;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(310px,.85fr);align-items:center;gap:clamp(30px,6vw,90px);padding:70px 0 90px}
+.eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:12px;letter-spacing:2.5px;text-transform:uppercase;color:#ffe0b6;margin-bottom:20px}.eyebrow:before{content:"";width:28px;height:1px;background:#ffd39a}
+.hero h1{font-size:clamp(48px,7.4vw,96px);line-height:.98;letter-spacing:-4px;font-weight:850;text-shadow:0 5px 30px rgba(0,0,0,.16)}.hero h1 span{color:#ffd19a}.hero-copy{max-width:500px;margin-top:22px;color:#e6edf5;font-size:16px;line-height:1.7;text-shadow:0 2px 12px #172b43}
+.weather-card,.search-card{background:var(--glass);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);box-shadow:0 22px 70px rgba(3,12,26,.25);border-radius:26px}
+.weather-card{padding:27px;margin-bottom:17px}.place-row{display:flex;align-items:center;justify-content:space-between;gap:12px}.place{font-size:13px;font-weight:750;letter-spacing:1.4px;color:#f4d9bd;text-transform:uppercase}.weather-icon{font-size:36px;filter:drop-shadow(0 5px 10px #0003)}.temperature{font-size:clamp(58px,7vw,82px);font-weight:750;letter-spacing:-5px;line-height:1.05;margin:10px 0 4px}.condition{font-size:17px;color:#f4f5f8}.weather-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:25px}.stat{padding:13px 11px;border-radius:15px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.1)}.stat-label{font-size:10px;color:#d1dbe7;letter-spacing:.8px;text-transform:uppercase}.stat-value{font-size:17px;font-weight:700;margin-top:7px}.status{display:inline-flex;align-items:center;gap:7px;margin-top:18px;padding:7px 11px;border-radius:999px;background:rgba(139,238,190,.13);color:#c4f6dc;font-size:10px;letter-spacing:1px}
+.search-card{padding:25px}.search-title{font-size:16px;font-weight:750;letter-spacing:.6px}.search-sub{font-size:12px;color:#d2dce8;margin-top:6px}.search-row{display:flex;gap:9px;margin-top:18px}.search-row input{min-width:0;flex:1;padding:15px 16px;border-radius:13px;border:1px solid rgba(255,255,255,.25);background:rgba(5,16,31,.42);color:#fff;font-size:14px;outline:none}.search-row input::placeholder{color:#c4cfdd}.search-row input:focus{border-color:#ffd19a;box-shadow:0 0 0 3px #ffd19a25}.search-row button{border:0;border-radius:13px;padding:0 22px;background:linear-gradient(135deg,#ffcf8b,#ff945f);color:#202b3a;font-weight:850;letter-spacing:1px;cursor:pointer;transition:transform .2s,filter .2s}.search-row button:hover{transform:translateY(-2px);filter:brightness(1.08)}
+.quick-label{font-size:10px;letter-spacing:1.3px;color:#d5dfeb;margin-top:20px;text-transform:uppercase}.quick-cities{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.city-chip{padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#f4f7fb;font-size:11px;cursor:pointer}.city-chip:hover,.city-chip.active{background:rgba(255,207,139,.22);border-color:#ffd19a}
+#error{min-height:16px;margin-top:10px;font-size:11px;color:#ffd0c5}.footer{display:flex;justify-content:space-between;gap:15px;color:#e1e8f1;font-size:10px;letter-spacing:1px;text-shadow:0 2px 8px #15243a}.footer span:last-child{text-align:right}
+@media(max-width:800px){.ui{padding:18px}.main{grid-template-columns:1fr;gap:22px;padding:65px 0 38px;margin:auto 0}.hero h1{font-size:clamp(48px,13vw,76px)}.hero-copy{font-size:14px;margin-top:14px}.weather-card{padding:22px}.search-card{padding:22px}.footer{font-size:9px}.live-pill{font-size:9px;padding:8px 11px}.brand-name{font-size:21px}}
+@media(max-width:430px){.brand-tag{font-size:8px}.weather-stats{gap:7px}.stat{padding:11px 8px}.stat-value{font-size:15px}.search-row button{padding:0 17px}.footer{flex-direction:column}.footer span:last-child{text-align:left}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body class="day">
+<div id="world" aria-hidden="true">
+  <div id="landscape"></div><div class="sky-glow"></div><div class="sun"></div><div class="moon"></div><div class="stars"></div>
+  <div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+  <div class="birds">⌁　⌁　⌁</div><div class="rain-layer"></div><div class="snow-layer"></div>
+</div>
+<div class="ui">
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark">✦</div><div><div class="brand-name">SKYLINE</div><div class="brand-tag">YOUR WEATHER. YOUR WORLD.</div></div></div>
+    <div class="live-pill"><span class="live-dot"></span> LIVE WEATHER</div>
+  </header>
+  <main class="main">
+    <section class="hero">
+      <div class="eyebrow">A clearer view of your world</div>
+      <h1>Feel the<br><span>weather.</span></h1>
+      <p class="hero-copy">Explore live conditions through a changing sky. From golden mornings to rainy evenings, see the atmosphere shift with your local weather.</p>
+    </section>
+    <section class="dashboard">
+      <div class="weather-card">
+        <div class="place-row"><div class="place" id="place">DELHI, INDIA</div><div class="weather-icon" id="weatherIcon">☀️</div></div>
+        <div class="temperature" id="temperature">--°</div>
+        <div class="condition" id="condition">Loading live weather...</div>
+        <div class="weather-stats">
+          <div class="stat"><div class="stat-label">Feels like</div><div class="stat-value" id="feels">--°</div></div>
+          <div class="stat"><div class="stat-label">Humidity</div><div class="stat-value" id="humidity">--%</div></div>
+          <div class="stat"><div class="stat-label">Wind</div><div class="stat-value" id="wind">-- km/h</div></div>
+        </div>
+        <div class="status" id="sceneStatus">✦ DAY SCENE</div>
+      </div>
+      <div class="search-card">
+        <div class="search-title">Explore a location</div><div class="search-sub">Search any city to see its current weather.</div>
+        <div class="search-row"><input id="city" type="text" placeholder="Enter a city name..." value="Delhi" autocomplete="off"><button id="searchBtn">EXPLORE</button></div>
+        <div id="error" role="status"></div>
+        <div class="quick-label">Popular destinations</div>
+        <div class="quick-cities"><button class="city-chip active" data-city="Delhi">Delhi</button><button class="city-chip" data-city="Mumbai">Mumbai</button><button class="city-chip" data-city="Jaipur">Jaipur</button><button class="city-chip" data-city="Goa">Goa</button></div>
+      </div>
+    </section>
+  </main>
+  <footer class="footer"><span>SKYLINE · LIVE WEATHER EXPERIENCE</span><span>POWERED BY OPEN-METEO · NO API KEY REQUIRED</span></footer>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const body=document.body;
+let currentCity='Delhi';
+function weatherName(code){if(code===0)return'Clear sky';if(code<=3)return'Partly cloudy';if(code<=48)return'Foggy';if(code<=57)return'Drizzle';if(code<=67)return'Rain';if(code<=77)return'Snow';if(code<=82)return'Rain showers';if(code<=86)return'Snow showers';if(code>=95)return'Thunderstorm';return'Cloudy'}
+function weatherIcon(code){if(code===0)return'☀️';if(code<=3)return'🌤️';if(code<=48)return'🌫️';if(code<=57)return'🌦️';if(code<=67)return'🌧️';if(code<=77)return'❄️';if(code<=82)return'🌦️';if(code<=86)return'🌨️';if(code>=95)return'⛈️';return'☁️'}
+function timeMode(hour){if(hour>=5&&hour<7)return'sunrise';if(hour>=7&&hour<17)return'day';if(hour>=17&&hour<19)return'sunset';return'night'}
+function setScene(code,hour){let mode=timeMode(hour);if((code>=51&&code<=67)||(code>=80&&code<=82)||code>=95)mode='rain';else if((code>=71&&code<=77)||(code>=85&&code<=86))mode='snow';body.className=mode;$('sceneStatus').textContent=({day:'✦ DAY SCENE',sunrise:'✦ SUNRISE SCENE',sunset:'✦ SUNSET SCENE',night:'✦ NIGHT SCENE',rain:'✦ RAINY WEATHER',snow:'✦ SNOW SCENE'})[mode]}
+async function loadWeather(city){if(!city.trim())return;$('error').textContent='Finding location...';$('searchBtn').disabled=true;try{const geoRes=await fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(city)+'&count=1&language=en&format=json');if(!geoRes.ok)throw new Error('Location search is unavailable.');const geo=await geoRes.json();if(!geo.results?.length)throw new Error('City not found. Try another location.');const loc=geo.results[0];const params=new URLSearchParams({latitude:loc.latitude,longitude:loc.longitude,current:'temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m',timezone:'auto'});const weatherRes=await fetch('https://api.open-meteo.com/v1/forecast?'+params);if(!weatherRes.ok)throw new Error('Weather data is temporarily unavailable.');const data=await weatherRes.json(),c=data.current;$('place').textContent=(loc.name+(loc.country?', '+loc.country:'' )).toUpperCase();$('temperature').textContent=Math.round(c.temperature_2m)+'°';$('condition').textContent=weatherName(c.weather_code);$('weatherIcon').textContent=weatherIcon(c.weather_code);$('feels').textContent=Math.round(c.apparent_temperature)+'°';$('humidity').textContent=c.relative_humidity_2m+'%';$('wind').textContent=Math.round(c.wind_speed_10m)+' km/h';const hour=Number(new Intl.DateTimeFormat('en-GB',{hour:'2-digit',hourCycle:'h23',timeZone:data.timezone}).format(new Date()));setScene(c.weather_code,hour);currentCity=loc.name;$('city').value=loc.name;$('error').textContent='';document.querySelectorAll('.city-chip').forEach(b=>b.classList.toggle('active',b.dataset.city.toLowerCase()===loc.name.toLowerCase()));}catch(err){$('error').textContent=err.message||'Something went wrong.'}finally{$('searchBtn').disabled=false}}
+$('searchBtn').addEventListener('click',()=>loadWeather($('city').value));$('city').addEventListener('keydown',e=>{if(e.key==='Enter')loadWeather($('city').value)});document.querySelectorAll('.city-chip').forEach(b=>b.addEventListener('click',()=>loadWeather(b.dataset.city)));
+loadWeather('Delhi');setInterval(()=>loadWeather(currentCity),600000);
+</script>
+</body>
+</html>
